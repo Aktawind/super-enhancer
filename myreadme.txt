@@ -11,3 +11,10 @@ pip install -r requirements.txt
 
 # 4. Lancer l'application !
 python app.py
+
+En ligne de commande :
+Pour lancer la librairie :
+python inference_realesrgan.py -n RealESRGAN_x4plus -i inputs --outscale 4 --fp32
+
+Pour générer l'exécutable :
+pyinstaller --onefile --windowed --add-data "weights;weights" app.py
