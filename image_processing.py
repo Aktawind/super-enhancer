@@ -18,7 +18,7 @@ class ImageProcessor:
         try:
             model_path_realesrgan = os.path.join('weights', 'RealESRGAN_x4plus.pth')
             model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
-            bg_upsampler = RealESRGANer(scale=4, model_path=model_path_realesrgan, model=model, tile=0, tile_pad=10, pre_pad=0, half=torch.cuda.is_available())
+            bg_upsampler = RealESRGANer(scale=4, model_path=model_path_realesrgan, model=model, tile=400, tile_pad=10, pre_pad=0, half=torch.cuda.is_available())
 
             model_path_gfpgan = os.path.join('weights', 'GFPGANv1.4.pth')
             self.gfpgan_model = GFPGANer(model_path=model_path_gfpgan, upscale=4, arch='clean', channel_multiplier=2, bg_upsampler=bg_upsampler)

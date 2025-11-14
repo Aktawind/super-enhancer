@@ -8,6 +8,8 @@ python -m venv venv
 .\venv\Scripts\activate
 
 # 3. Installer les mêmes dépendances
+pip install --upgrade pip
+pip install wheel setuptools
 pip install -r requirements.txt
 
 # 4. Lancer l'application

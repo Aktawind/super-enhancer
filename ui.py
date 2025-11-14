@@ -25,6 +25,9 @@ class UpscalerApp(ctk.CTk):
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("blue")
 
+        placeholder_pil = Image.new('RGBA', (1, 1), (0, 0, 0, 0))
+        self.placeholder_image = ctk.CTkImage(light_image=placeholder_pil, size=(1,1))
+
         # --- Attributs d'état ---
         self.input_path = None
         self.output_pil_image = None
@@ -97,12 +100,6 @@ class UpscalerApp(ctk.CTk):
         self.input_image_label = ctk.CTkLabel(self.images_frame, text="Chargez une image...", corner_radius=10, fg_color=("gray90", "gray13"))
         self.input_image_label.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
         self.output_image_label = ctk.CTkLabel(self.images_frame, text="Le résultat apparaîtra ici.", corner_radius=10, fg_color=("gray90", "gray13"))
-        self.output_image_label.configure(
-            image=None,
-            font=ctk.CTkFont(size=20, weight="bold"), # Police plus grosse et en gras
-            fg_color=("white", "black"), # Fond blanc en thème clair, noir en thème sombre
-            text_color=("black", "white") # Texte noir en thème clair, blanc en thème sombre
-        )
         self.output_image_label.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
         ctk.CTkFrame(self.images_frame, width=2, fg_color="gray").grid(row=0, column=1, rowspan=2, padx=10, pady=10, sticky="ns")
 
@@ -296,12 +293,26 @@ class UpscalerApp(ctk.CTk):
     def on_closing(self):
         self.save_config(); self.destroy()
 
+    def reset_output_panel(self):
+        """Réinitialise le panneau de l'image de sortie à son état initial de manière sûre."""
+        # Au lieu de mettre l'image à None, on la REMPLACE par notre placeholder.
+        # C'est une opération sûre qui ne cause pas de bugs de mémoire.
+        self.output_image_label.configure(
+            image=self.placeholder_image,
+            text="Le résultat apparaîtra ici."
+        )
+        self.output_image_label.image = self.placeholder_image # On ancre le placeholder
+
+        # On nettoie nos variables Python ensuite, maintenant que l'interface est stable.
+        self.output_pil_image = None
+        self.displayed_output_image = None
+        self.ctk_output_image = None
+
     def load_image(self):
         path = filedialog.askopenfilename(filetypes=[("Images", "*.png;*.jpg;*.jpeg;*.bmp")])
         if not path: return
         self.input_path = path
-        self.output_pil_image = None; self.displayed_output_image = None
-        self.output_image_label.configure(image=None, text="Le résultat apparaîtra ici.")
+        self.reset_output_panel()
         for btn in [self.btn_save, self.btn_auto_color, self.btn_apply_color]: btn.configure(state="disabled")
         self.color_slider.configure(state="disabled"); self.color_slider.set(0); self.update_slider_label(0)
         self.progressbar.set(0); self.time_label.configure(text="")
