@@ -10,6 +10,7 @@ import json
 
 from image_processing import ImageProcessor
 import utils
+from version import __version__
 
 PREVIEW_SIZE = (400, 400)
 
@@ -55,7 +56,7 @@ class UpscalerApp(ctk.CTk):
         # --- Panneau de contrôle ---
         self.controls_frame = ctk.CTkFrame(self, width=180, corner_radius=0)
         self.controls_frame.grid(row=0, column=0, rowspan=3, sticky="nsew")
-        self.controls_frame.grid_rowconfigure(9, weight=1)
+        self.controls_frame.grid_rowconfigure(10, weight=1)
 
         try:
             logo_pil = Image.open(utils.resource_path("assets/app_logo.png"))
@@ -64,31 +65,42 @@ class UpscalerApp(ctk.CTk):
         except Exception:
             ctk.CTkLabel(self.controls_frame, text="Super Enhancer", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=(20, 10))
 
+        version_label = ctk.CTkLabel(self.controls_frame, text=f"Version {__version__}", font=ctk.CTkFont(size=12))
+        version_label.grid(row=1, column=0, padx=20, pady=(0, 20))
+
+        # --- On décale toutes les rangées suivantes de +1 ---
         self.btn_load = ctk.CTkButton(self.controls_frame, text="Charger l'image", command=self.load_image)
-        self.btn_load.grid(row=1, column=0, padx=20, pady=10)
+        self.btn_load.grid(row=2, column=0, padx=20, pady=10) # row 1 -> 2
+
         self.btn_process = ctk.CTkButton(self.controls_frame, text="Améliorer", command=self.start_processing_thread, state="disabled")
-        self.btn_process.grid(row=2, column=0, padx=20, pady=10)
+        self.btn_process.grid(row=3, column=0, padx=20, pady=10) # row 2 -> 3
+
         self.cb_face_restore = ctk.CTkCheckBox(self.controls_frame, text="Restaurer les visages")
-        self.cb_face_restore.grid(row=3, column=0, padx=20, pady=10)
+        self.cb_face_restore.grid(row=4, column=0, padx=20, pady=10) # row 3 -> 4
         self.cb_face_restore.select()
 
-        ctk.CTkLabel(self.controls_frame, text="Correction du Jaunissement", font=ctk.CTkFont(weight="bold")).grid(row=4, column=0, padx=20, pady=(15, 0))
+        ctk.CTkLabel(self.controls_frame, text="Correction du Jaunissement", font=ctk.CTkFont(weight="bold")).grid(row=5, column=0, padx=20, pady=(15, 0)) # row 4 -> 5
+
         self.color_slider = ctk.CTkSlider(self.controls_frame, from_=0, to=100, command=self.update_slider_label)
-        self.color_slider.grid(row=5, column=0, padx=20, pady=(5, 0), sticky="ew")
+        self.color_slider.grid(row=6, column=0, padx=20, pady=(5, 0), sticky="ew") # row 5 -> 6
         self.color_slider.set(0)
         self.color_slider.configure(state="disabled")
-        self.color_slider_label = ctk.CTkLabel(self.controls_frame, text="Intensité : 0%")
-        self.color_slider_label.grid(row=6, column=0, padx=20, pady=(0, 0))
-        self.btn_apply_color = ctk.CTkButton(self.controls_frame, text="Appliquer", command=self.apply_manual_color, state="disabled")
-        self.btn_apply_color.grid(row=7, column=0, padx=20, pady=(5, 5))
-        self.btn_auto_color = ctk.CTkButton(self.controls_frame, text="Correction Auto", command=self.apply_auto_color, state="disabled")
-        self.btn_auto_color.grid(row=8, column=0, padx=20, pady=(0, 5))
 
+        self.color_slider_label = ctk.CTkLabel(self.controls_frame, text="Intensité : 0%")
+        self.color_slider_label.grid(row=7, column=0, padx=20, pady=(0, 0)) # row 6 -> 7
+
+        self.btn_apply_color = ctk.CTkButton(self.controls_frame, text="Appliquer", command=self.apply_manual_color, state="disabled")
+        self.btn_apply_color.grid(row=8, column=0, padx=20, pady=(5, 5)) # row 7 -> 8
+
+        self.btn_auto_color = ctk.CTkButton(self.controls_frame, text="Correction Auto", command=self.apply_auto_color, state="disabled")
+        self.btn_auto_color.grid(row=9, column=0, padx=20, pady=(0, 5)) # row 8 -> 9
+
+        # --- Boutons du bas ---
         self.btn_cancel = ctk.CTkButton(self.controls_frame, text="Annuler", command=self.cancel_processing, state="disabled")
-        self.btn_cancel.grid(row=9, column=0, padx=20, pady=10, sticky="s")
+        self.btn_cancel.grid(row=11, column=0, padx=20, pady=10) # row 9 -> 11
 
         self.btn_save = ctk.CTkButton(self.controls_frame, text="Enregistrer", command=self.save_image, state="disabled")
-        self.btn_save.grid(row=10, column=0, padx=20, pady=10, sticky="s")
+        self.btn_save.grid(row=12, column=0, padx=20, pady=10, sticky="s") # row 10 -> 12
 
         # --- Panneau d'images et de progression ---
         self.images_frame = ctk.CTkFrame(self, corner_radius=10)
