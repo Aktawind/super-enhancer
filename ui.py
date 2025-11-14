@@ -31,6 +31,7 @@ class UpscalerApp(ctk.CTk):
         self.displayed_output_image = None
         self.ctk_input_image = None
         self.ctk_output_image = None # Référence permanente pour l'image de sortie
+        self.cancellation_event = threading.Event() # Le signal d'annulation
 
         # --- Threading & Config ---
         self.progress_queue = queue.Queue()
@@ -60,9 +61,9 @@ class UpscalerApp(ctk.CTk):
         except Exception:
             ctk.CTkLabel(self.controls_frame, text="Super Enhancer", font=ctk.CTkFont(size=20, weight="bold")).grid(row=0, column=0, padx=20, pady=(20, 10))
 
-        self.btn_load = ctk.CTkButton(self.controls_frame, text="1. Charger l'image", command=self.load_image)
+        self.btn_load = ctk.CTkButton(self.controls_frame, text="Charger l'image", command=self.load_image)
         self.btn_load.grid(row=1, column=0, padx=20, pady=10)
-        self.btn_process = ctk.CTkButton(self.controls_frame, text="2. Améliorer", command=self.start_processing_thread, state="disabled")
+        self.btn_process = ctk.CTkButton(self.controls_frame, text="Améliorer", command=self.start_processing_thread, state="disabled")
         self.btn_process.grid(row=2, column=0, padx=20, pady=10)
         self.cb_face_restore = ctk.CTkCheckBox(self.controls_frame, text="Restaurer les visages")
         self.cb_face_restore.grid(row=3, column=0, padx=20, pady=10)
@@ -79,8 +80,12 @@ class UpscalerApp(ctk.CTk):
         self.btn_apply_color.grid(row=7, column=0, padx=20, pady=(5, 5))
         self.btn_auto_color = ctk.CTkButton(self.controls_frame, text="Correction Auto", command=self.apply_auto_color, state="disabled")
         self.btn_auto_color.grid(row=8, column=0, padx=20, pady=(0, 5))
-        self.btn_save = ctk.CTkButton(self.controls_frame, text="3. Enregistrer", command=self.save_image, state="disabled")
-        self.btn_save.grid(row=9, column=0, padx=20, pady=10, sticky="s")
+
+        self.btn_cancel = ctk.CTkButton(self.controls_frame, text="Annuler", command=self.cancel_processing, state="disabled")
+        self.btn_cancel.grid(row=9, column=0, padx=20, pady=10, sticky="s")
+
+        self.btn_save = ctk.CTkButton(self.controls_frame, text="Enregistrer", command=self.save_image, state="disabled")
+        self.btn_save.grid(row=10, column=0, padx=20, pady=10, sticky="s")
 
         # --- Panneau d'images et de progression ---
         self.images_frame = ctk.CTkFrame(self, corner_radius=10)
@@ -92,6 +97,12 @@ class UpscalerApp(ctk.CTk):
         self.input_image_label = ctk.CTkLabel(self.images_frame, text="Chargez une image...", corner_radius=10, fg_color=("gray90", "gray13"))
         self.input_image_label.grid(row=1, column=0, padx=10, pady=10, sticky="nsew")
         self.output_image_label = ctk.CTkLabel(self.images_frame, text="Le résultat apparaîtra ici.", corner_radius=10, fg_color=("gray90", "gray13"))
+        self.output_image_label.configure(
+            image=None,
+            font=ctk.CTkFont(size=20, weight="bold"), # Police plus grosse et en gras
+            fg_color=("white", "black"), # Fond blanc en thème clair, noir en thème sombre
+            text_color=("black", "white") # Texte noir en thème clair, blanc en thème sombre
+        )
         self.output_image_label.grid(row=1, column=2, padx=10, pady=10, sticky="nsew")
         ctk.CTkFrame(self.images_frame, width=2, fg_color="gray").grid(row=0, column=1, rowspan=2, padx=10, pady=10, sticky="ns")
 
@@ -122,6 +133,8 @@ class UpscalerApp(ctk.CTk):
     def start_processing_thread(self):
         for btn in [self.btn_process, self.btn_load, self.btn_save, self.btn_auto_color, self.btn_apply_color]: btn.configure(state="disabled")
         self.color_slider.configure(state="disabled")
+        self.cancellation_event.clear() # On réinitialise le signal d'annulation
+        self.btn_cancel.configure(state="normal") # On active le bouton Annuler
         try:
             with Image.open(self.input_path) as img: pixels = img.width * img.height; megapixels = pixels / 1_000_000
         except Exception: megapixels = 1
@@ -137,16 +150,23 @@ class UpscalerApp(ctk.CTk):
         start_time = time.time()
         try:
             restore_faces = self.cb_face_restore.get()
-            # 1. Le worker traite l'image et récupère l'objet PIL
-            result_pil_image = self.processor.process_image(self.input_path, restore_faces)
+            # On appelle la fonction UNE SEULE FOIS
+            result_image = self.processor.process_image(self.input_path, restore_faces, self.cancellation_event)
 
-            # 2. Le worker PREPARE l'objet CTkImage, prêt à être affiché
-            ctk_output_image = ctk.CTkImage(light_image=result_pil_image, size=(PREVIEW_SIZE[0], int(PREVIEW_SIZE[1] * result_pil_image.height / result_pil_image.width)))
+            if result_image == "cancelled":
+                self.progress_queue.put(('cancelled', None))
+            else:
+                # Si ce n'est pas annulé, result_image CONTIENT déjà l'image PIL traitée.
+                # On n'a pas besoin de refaire le traitement.
+                result_pil_image = result_image
 
-            duration = time.time() - start_time
-            self.progress_queue.put(('timing', (duration, pixels)))
-            # 3. Le worker envoie l'objet PIL ET l'objet CTkImage à l'interface
-            self.progress_queue.put(('done', (result_pil_image, ctk_output_image)))
+                # 2. Le worker PREPARE l'objet CTkImage, prêt à être affiché
+                ctk_output_image = ctk.CTkImage(light_image=result_pil_image, size=(PREVIEW_SIZE[0], int(PREVIEW_SIZE[1] * result_pil_image.height / result_pil_image.width)))
+
+                duration = time.time() - start_time
+                self.progress_queue.put(('timing', (duration, pixels)))
+                # 3. Le worker envoie l'objet PIL ET l'objet CTkImage à l'interface
+                self.progress_queue.put(('done', (result_pil_image, ctk_output_image)))
         except Exception as e:
             self.progress_queue.put(('error', str(e)))
 
@@ -223,6 +243,7 @@ class UpscalerApp(ctk.CTk):
                 megapixels = pixels / 1_000_000
                 if megapixels > 0: self.seconds_per_megapixel = duration / megapixels; self.save_config()
             elif msg_type == 'done':
+                self.btn_cancel.configure(state="disabled") # On désactive Annuler
                 # 4. L'interface reçoit les deux objets
                 pil_image, ctk_image = msg_data
                 self.output_pil_image = pil_image
@@ -237,11 +258,26 @@ class UpscalerApp(ctk.CTk):
                 self.color_slider.configure(state="normal")
                 return
             elif msg_type == 'error':
+                self.btn_cancel.configure(state="disabled") # On désactive Annuler
                 messagebox.showerror("Erreur", str(msg_data)); self.update_status("Une erreur est survenue."); self.progressbar.set(0); self.time_label.configure(text="")
                 for btn in [self.btn_load, self.btn_process]: btn.configure(state="normal")
                 return
+            elif msg_type == 'cancelled':
+                self.update_status("Traitement annulé par l'utilisateur.")
+                self.progressbar.set(0)
+                self.time_label.configure(text="")
+                for btn in [self.btn_load, self.btn_process]:
+                    btn.configure(state="normal")
+                self.btn_cancel.configure(state="disabled")
+                return # On arrête la boucle de mise à jour
         except queue.Empty: pass
         self.after(100, self.update_progress)
+
+    def cancel_processing(self):
+        """Active le signal d'annulation."""
+        self.update_status("Annulation en cours...")
+        self.cancellation_event.set()
+        self.btn_cancel.configure(state="disabled")
 
     def load_config(self):
         try:

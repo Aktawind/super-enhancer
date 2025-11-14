@@ -31,12 +31,17 @@ class ImageProcessor:
             print(f"Erreur de chargement de modèle : {e}")
             return e # On retourne l'erreur pour l'afficher dans l'UI
 
-    def process_image(self, input_path, restore_faces):
+    def process_image(self, input_path, restore_faces, cancellation_event):
         """Améliore une image en utilisant les modèles chargés."""
         print(f"Traitement de {input_path}, restauration des visages: {restore_faces}")
         img = cv2.imread(input_path, cv2.IMREAD_COLOR)
         if img is None:
             raise ValueError("Impossible de lire le fichier image.")
+
+        # On vérifie le signal AVANT de commencer le gros travail
+        if cancellation_event.is_set():
+            print("Traitement annulé avant le démarrage.")
+            return "cancelled"
 
         if restore_faces and self.gfpgan_model:
             _, _, restored_img = self.gfpgan_model.enhance(img, has_aligned=False, only_center_face=False, paste_back=True)
@@ -46,5 +51,9 @@ class ImageProcessor:
         else:
             raise RuntimeError("Aucun modèle n'est chargé pour le traitement.")
 
-        return Image.fromarray(cv2.cvtColor(output, cv2.COLOR_BGR2RGB))
+        # On vérifie une dernière fois après la fin du traitement
+        if cancellation_event.is_set():
+            print("Traitement annulé après la fin.")
+            return "cancelled"
 
+        return Image.fromarray(cv2.cvtColor(output, cv2.COLOR_BGR2RGB))

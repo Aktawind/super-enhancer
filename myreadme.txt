@@ -1,6 +1,6 @@
 # Installer le code sur un autre PC
 # 1. Cloner le projet
-git clone <url_de_votre_projet>
+git clone https://github.com/Aktawind/super-enhancer.git
 cd super-enhancer
 
 # 2. Créer un environnement virtuel
