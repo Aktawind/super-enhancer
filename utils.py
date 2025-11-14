@@ -4,6 +4,17 @@ import cv2
 import numpy as np
 from PIL import Image
 
+def resource_path(relative_path):
+    """ Renvoie le chemin absolu vers une ressource, fonctionne pour le dev et pour PyInstaller """
+    try:
+        # PyInstaller crée un dossier temporaire et stocke son chemin dans _MEIPASS.
+        base_path = sys._MEIPASS
+    except Exception:
+        # Si on n'est pas dans un exécutable, le chemin de base est le dossier de travail actuel
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 def get_config_path():
     """Retourne le chemin vers le fichier de config dans le dossier AppData."""
     app_data_path = os.getenv('APPDATA')

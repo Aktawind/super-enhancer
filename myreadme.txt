@@ -1,3 +1,4 @@
+# Installer le code sur un autre PC
 # 1. Cloner le projet
 git clone <url_de_votre_projet>
 cd super-enhancer
@@ -6,15 +7,14 @@ cd super-enhancer
 python -m venv venv
 .\venv\Scripts\activate
 
-# 3. Installer EXACTEMENT les mêmes dépendances
+# 3. Installer les mêmes dépendances
 pip install -r requirements.txt
 
-# 4. Lancer l'application !
-python app.py
+# 4. Lancer l'application
+python main.py
 
-En ligne de commande :
-Pour lancer la librairie :
+# Pour tester la librairie realesrgan unitairement
 python inference_realesrgan.py -n RealESRGAN_x4plus -i inputs --outscale 4 --fp32
 
-Pour générer l'exécutable :
-pyinstaller --onefile --windowed --add-data "weights;weights" app.py
+# Pour générer l'exécutable de l'application
+pyinstaller --noconfirm --onefile --windowed --name SuperEnhancerPro --icon="assets/app_icon.ico" --collect-all basicsr --collect-all gfpgan --collect-all realesrgan --add-data "assets;assets" --add-data "weights;weights" main.py

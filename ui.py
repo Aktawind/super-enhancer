@@ -20,7 +20,7 @@ class UpscalerApp(ctk.CTk):
         self.title("Super Enhancer Pro")
         self.geometry("1000x700")
         try:
-            self.iconbitmap('assets/app_icon.ico')
+            self.iconbitmap(utils.resource_path('assets/app_icon.ico'))
         except Exception: pass
         ctk.set_appearance_mode("System")
         ctk.set_default_color_theme("blue")
@@ -54,7 +54,7 @@ class UpscalerApp(ctk.CTk):
         self.controls_frame.grid_rowconfigure(9, weight=1)
 
         try:
-            logo_pil = Image.open("assets/app_logo.png")
+            logo_pil = Image.open(utils.resource_path("assets/app_logo.png"))
             logo_image = ctk.CTkImage(light_image=logo_pil, size=(140, int(140 * logo_pil.height / logo_pil.width)))
             ctk.CTkLabel(self.controls_frame, image=logo_image, text="").grid(row=0, column=0, padx=20, pady=(20, 10))
         except Exception:
